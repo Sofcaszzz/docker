@@ -1,37 +1,31 @@
 #!/bin/bash
-
 set -e
 
 if [ -v PASSWORD_FILE ]; then
     PASSWORD="$(< $PASSWORD_FILE)"
 fi
 
-# set the postgres database host, port, user and password according to the environment
-# and pass them as arguments to the odoo process if not present in the config file
-: ${HOST:=${DB_HOST}}
+DB_ARGS=()
+
+function check_config() {
+    param="$1"
+    value="$2"
+    if grep -q -E "^\s*\b${param}\b\s*=" "$ODOO_RC" ; then
+        value=$(grep -E "^\s*\b${param}\b\s*=" "$ODOO_RC" | cut -d " " -f3 | sed 's/["\n\r]//g')
+    fi
+    DB_ARGS+=("--${param}")
+    DB_ARGS+=("${value}")
+}
+
+# Variables de entorno (NO tocar PORT de Render)
 : ${HOST:=${DB_HOST}}
 : ${DBPORT:=${DB_PORT:=5432}}
 : ${USER:=${DB_USER}}
 : ${PASSWORD:=${DB_PASSWORD}}
 
+# Construir args para Odoo
 check_config "db_host" "$HOST"
 check_config "db_port" "$DBPORT"
-check_config "db_user" "$USER"
-check_config "db_password" "$PASSWORD"
-
-
-DB_ARGS=()
-function check_config() {
-    param="$1"
-    value="$2"
-    if grep -q -E "^\s*\b${param}\b\s*=" "$ODOO_RC" ; then       
-        value=$(grep -E "^\s*\b${param}\b\s*=" "$ODOO_RC" |cut -d " " -f3|sed 's/["\n\r]//g')
-    fi;
-    DB_ARGS+=("--${param}")
-    DB_ARGS+=("${value}")
-}
-check_config "db_host" "$HOST"
-check_config "db_port" "$PORT"
 check_config "db_user" "$USER"
 check_config "db_password" "$PASSWORD"
 
