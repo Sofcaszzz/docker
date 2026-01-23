@@ -22,9 +22,11 @@ function check_config() {
 : ${DBPORT:=${DB_PORT:=5432}}
 : ${USER:=${DB_USER}}
 : ${PASSWORD:=${DB_PASSWORD}}
+: ${DBNAME:=${DB_NAME:=odoo}}
 
-# 👉 Forzar SSL para Neon (para wait-for-psql.py)
+# Forzar SSL para Neon
 export PGSSLMODE=require
+export PGPASSWORD="${PASSWORD}"
 
 # Construir args
 check_config "db_host" "$HOST"
@@ -32,22 +34,12 @@ check_config "db_port" "$DBPORT"
 check_config "db_user" "$USER"
 check_config "db_password" "$PASSWORD"
 
-case "$1" in
-    -- | odoo)
-        shift
-        if [[ "$1" == "scaffold" ]] ; then
-            exec odoo "$@"
-        else
-            wait-for-psql.py ${DB_ARGS[@]} --timeout=30
-            exec odoo "$@" "${DB_ARGS[@]}"
-        fi
-        ;;
-    -*)
-        wait-for-psql.py ${DB_ARGS[@]} --timeout=30
-        exec odoo "$@" "${DB_ARGS[@]}"
-        ;;
-    *)
-        exec "$@"
-esac
+echo "==> Waiting for Postgres..."
+wait-for-psql.py ${DB_ARGS[@]} --timeout=30
 
-exit 1
+echo "==> Initializing database '${DBNAME}' (installing base)..."
+# NOTA: no usamos exec aquí para poder arrancar Odoo después de la init
+odoo "${DB_ARGS[@]}" -d "${DBNAME}" -i base --stop-after-init
+
+echo "==> Initialization finished. Starting Odoo normally..."
+exec odoo "$@" "${DB_ARGS[@]}"
