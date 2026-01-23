@@ -17,19 +17,20 @@ function check_config() {
     DB_ARGS+=("${value}")
 }
 
-# Variables de entorno (NO tocar PORT de Render)
+# Variables de entorno
 : ${HOST:=${DB_HOST}}
 : ${DBPORT:=${DB_PORT:=5432}}
 : ${USER:=${DB_USER}}
 : ${PASSWORD:=${DB_PASSWORD}}
 
-# Construir args para Odoo
+# 👉 Forzar SSL para Neon (para wait-for-psql.py)
+export PGSSLMODE=require
+
+# Construir args
 check_config "db_host" "$HOST"
 check_config "db_port" "$DBPORT"
 check_config "db_user" "$USER"
 check_config "db_password" "$PASSWORD"
-check_config "db_sslmode" "require"
-
 
 case "$1" in
     -- | odoo)
