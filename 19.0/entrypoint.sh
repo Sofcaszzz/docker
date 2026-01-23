@@ -28,6 +28,8 @@ check_config "db_host" "$HOST"
 check_config "db_port" "$DBPORT"
 check_config "db_user" "$USER"
 check_config "db_password" "$PASSWORD"
+check_config "db_sslmode" "require"
+
 
 case "$1" in
     -- | odoo)
