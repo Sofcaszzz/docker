@@ -3,14 +3,10 @@ MAINTAINER Odoo S.A. <info@odoo.com>
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
-# Generate locale C.UTF-8 for postgres and general locale data
 ENV LANG en_US.UTF-8
-
-# Retrieve the target architecture to install the correct wkhtmltopdf package
 ARG TARGETARCH
 
-# Install some deps, lessc and less-plugin-clean-css, and wkhtmltopdf
-
+# Instalar dependencias
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive \
     apt-get install -y --no-install-recommends \
@@ -52,13 +48,11 @@ RUN apt-get update && \
     && apt-get install -y --no-install-recommends ./wkhtmltox.deb \
     && rm -rf /var/lib/apt/lists/* wkhtmltox.deb
 
-# install latest postgresql-client
+# PostgreSQL client
 RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ noble-pgdg main' > /etc/apt/sources.list.d/pgdg.list \
     && GNUPGHOME="$(mktemp -d)" \
-    && export GNUPGHOME \
-    && repokey='B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8' \
-    && gpg --batch --keyserver keyserver.ubuntu.com --recv-keys "${repokey}" \
-    && gpg --batch --armor --export "${repokey}" > /etc/apt/trusted.gpg.d/pgdg.gpg.asc \
+    && gpg --batch --keyserver keyserver.ubuntu.com --recv-keys B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8 \
+    && gpg --batch --armor --export B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8 > /etc/apt/trusted.gpg.d/pgdg.gpg.asc \
     && gpgconf --kill all \
     && rm -rf "$GNUPGHOME" \
     && apt-get update  \
@@ -66,10 +60,10 @@ RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ noble-pgdg main' > /etc/a
     && rm -f /etc/apt/sources.list.d/pgdg.list \
     && rm -rf /var/lib/apt/lists/*
 
-# Install rtlcss (on Debian buster)
+# rtlcss
 RUN npm install -g rtlcss
 
-# Install Odoo
+# Odoo 19.0
 ENV ODOO_VERSION 19.0
 ARG ODOO_RELEASE=20260118
 ARG ODOO_SHA=9cb5691e31d2d8831887e85cc07268016f522f4d
@@ -79,27 +73,18 @@ RUN curl -o odoo.deb -sSL http://nightly.odoo.com/${ODOO_VERSION}/nightly/deb/od
     && apt-get -y install --no-install-recommends ./odoo.deb \
     && rm -rf /var/lib/apt/lists/* odoo.deb
 
-# Copy entrypoint script and Odoo configuration file
-COPY 19.0/entrypoint.sh /
+# Copiar configuración, entrypoint y addons
 COPY 19.0/odoo.conf /etc/odoo/
+COPY 19.0/entrypoint.sh /entrypoint.sh
+COPY 19.0/wait-for-psql.py /usr/local/bin/wait-for-psql.py
+COPY 19.0/extra-addons /mnt/extra-addons
 
+RUN chown -R odoo:odoo /mnt/extra-addons /etc/odoo/odoo.conf
 
-# Set permissions and Mount /var/lib/odoo to allow restoring filestore and /mnt/extra-addons for users addons
-RUN chown odoo /etc/odoo/odoo.conf \
-    && mkdir -p /mnt/extra-addons \
-    && chown -R odoo /mnt/extra-addons
-VOLUME ["/var/lib/odoo", "/mnt/extra-addons"]
-
-# Expose Odoo services
+VOLUME ["/mnt/extra-addons"]  # solo addons
 EXPOSE 8069 8071 8072
 
-# Set the default config file
 ENV ODOO_RC /etc/odoo/odoo.conf
-
-COPY 19.0/wait-for-psql.py /usr/local/bin/wait-for-psql.py
-
-# Set default user when running the container
 USER odoo
-
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["odoo"]
