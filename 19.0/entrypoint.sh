@@ -1,9 +1,13 @@
 #!/bin/bash
 set -e
 
-if [ -v PASSWORD_FILE ]; then
-    PASSWORD="$(< $PASSWORD_FILE)"
-fi
+# Variables de entorno
+: ${HOST:=${DB_HOST}}
+: ${DBPORT:=${DB_PORT:=5432}}
+: ${USER:=${DB_USER}}
+: ${PASSWORD:=${DB_PASSWORD}}
+
+export PGSSLMODE=require
 
 DB_ARGS=()
 
@@ -17,37 +21,10 @@ function check_config() {
     DB_ARGS+=("${value}")
 }
 
-# Variables de entorno
-: ${HOST:=${DB_HOST}}
-: ${DBPORT:=${DB_PORT:=5432}}
-: ${USER:=${DB_USER}}
-: ${PASSWORD:=${DB_PASSWORD}}
-
-# 👉 Forzar SSL para Neon (para wait-for-psql.py)
-export PGSSLMODE=require
-
-# Construir args
 check_config "db_host" "$HOST"
 check_config "db_port" "$DBPORT"
 check_config "db_user" "$USER"
 check_config "db_password" "$PASSWORD"
 
-case "$1" in
-    -- | odoo)
-        shift
-        if [[ "$1" == "scaffold" ]] ; then
-            exec odoo "$@"
-        else
-            wait-for-psql.py ${DB_ARGS[@]} --timeout=30
-            exec odoo "$@" "${DB_ARGS[@]}"
-        fi
-        ;;
-    -*)
-        wait-for-psql.py ${DB_ARGS[@]} --timeout=30
-        exec odoo "$@" "${DB_ARGS[@]}"
-        ;;
-    *)
-        exec "$@"
-esac
-
-exit 1
+# Lanzar Odoo
+exec wait-for-psql.py ${DB_ARGS[@]} --timeout=30 && exec odoo "$@" "${DB_ARGS[@]}"
