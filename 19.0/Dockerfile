@@ -77,11 +77,10 @@ RUN curl -o odoo.deb -sSL http://nightly.odoo.com/${ODOO_VERSION}/nightly/deb/od
 COPY 19.0/odoo.conf /etc/odoo/
 COPY 19.0/entrypoint.sh /entrypoint.sh
 COPY 19.0/wait-for-psql.py /usr/local/bin/wait-for-psql.py
-COPY 19.0/extra-addons /mnt/extra-addons
 
-RUN chown -R odoo:odoo /mnt/extra-addons /etc/odoo/odoo.conf
+RUN chown odoo:odoo /etc/odoo/odoo.conf
 
-VOLUME ["/mnt/extra-addons"]  # solo addons
+
 EXPOSE 8069 8071 8072
 
 ENV ODOO_RC /etc/odoo/odoo.conf
