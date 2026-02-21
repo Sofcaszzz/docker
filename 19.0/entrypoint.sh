@@ -28,7 +28,14 @@ check_config "db_user" "$USER"
 check_config "db_password" "$PASSWORD"
 
 # Esperar a que la DB esté lista
-exec wait-for-psql.py "${DB_ARGS[@]}" --timeout=30
+wait-for-psql.py "${DB_ARGS[@]}" --timeout=30
 
-# Arrancar Odoo con la base de datos
-exec odoo "$@" --database "$DB_NAME"
+# Arrancar Odoo
+exec odoo \
+  --database "$DB_NAME" \
+  --db_host "$HOST" \
+  --db_port "$DBPORT" \
+  --db_user "$USER" \
+  --db_password "$PASSWORD" \
+  --http-port "${PORT}" \
+  --http-interface 0.0.0.0
