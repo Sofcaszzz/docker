@@ -6,6 +6,7 @@ set -e
 : ${DBPORT:=${DB_PORT:=5432}}
 : ${USER:=${DB_USER}}
 : ${PASSWORD:=${DB_PASSWORD}}
+: ${DB_NAME:=${DB_NAME}}
 
 export PGSSLMODE=require
 
@@ -25,7 +26,9 @@ check_config "db_host" "$HOST"
 check_config "db_port" "$DBPORT"
 check_config "db_user" "$USER"
 check_config "db_password" "$PASSWORD"
-DB_ARGS+=("--database" "${DB_NAME}")
 
-# Lanzar Odoo
-exec wait-for-psql.py ${DB_ARGS[@]} --timeout=30 && exec odoo "$@" "${DB_ARGS[@]}"
+# Esperar a que la DB esté lista
+exec wait-for-psql.py "${DB_ARGS[@]}" --timeout=30
+
+# Arrancar Odoo con la base de datos
+exec odoo "$@" --database "$DB_NAME"
